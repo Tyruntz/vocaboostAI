@@ -360,7 +360,7 @@ const HomePage = () => {
          )}
 
          {/* Main Content Area - Right Section */}
-         <div className="flex-grow bg-[#000814] p-6 rounded-lg shadow-xl flex flex-col overflow-hidden text-white">
+         <div className="flex-grow bg-[#000814] p-2 rounded-lg shadow-xl flex flex-col overflow-hidden text-white">
             {activeTab === "home" && (
                <div className="flex flex-col justify-center items-center h-full text-center animate-fade-in">
                   <h1 className="text-4xl font-bold text-[#FFD60A] mb-4">

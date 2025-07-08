@@ -1,6 +1,7 @@
 // ChatbotContent.jsx
 import React from "react";
 import { useEffect, useRef } from "react";
+import { HiOutlinePencilAlt } from "react-icons/hi"; // Pastikan ini diimpor
 
 const formatWaktu = (iso) => {
   if (!iso) return "";
@@ -15,7 +16,7 @@ const formatWaktu = (iso) => {
 // Komponen untuk pesan dari user (bubble di kanan)
 const UserMessage = ({ message, waktu }) => (
   <div className="flex justify-end mb-4">
-    <div className="bg-[#FFC300] text-[#000814] p-3 rounded-lg max-w-xs md:max-w-md shadow-md">
+    <div className="bg-[#FFC300] text-[#000814] p-3 rounded-lg max-w-[85%] md:max-w-md shadow-md">
       <p>{message}</p>
       <p className="text-xs text-[#000814] text-right mt-1">
         {formatWaktu(waktu)}
@@ -23,8 +24,8 @@ const UserMessage = ({ message, waktu }) => (
     </div>
   </div>
 );
+
 const formatMessageWithBold = (text) => {
-  // Ganti *text* jadi <strong>text</strong>
   const parts = text.split(/(\*[^*]+\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith("*") && part.endsWith("*")) {
@@ -46,16 +47,20 @@ const BotMessage = ({ message, waktu }) => {
 
   return (
     <div className="flex justify-start mb-4">
-      <div className="bg-[#001D3D] text-white p-3 rounded-lg max-w-xs md:max-w-md space-y-2">
+      <div className="bg-[#001D3D] text-white p-3 rounded-lg max-w-[85%] md:max-w-md space-y-2">
         <p className="whitespace-pre-line">
           {formatMessageWithBold(mainContent)}
         </p>
 
         {exampleMatch && (
           <div className="bg-[#003566] border border-[#001D3D] rounded-md p-2 text-sm">
-            <p className="font-semibold text-[#FFD60A]">📘 Contoh Kalimat:</p>
+            <p className="font-semibold text-[#FFD60A]">
+              📘 Contoh Kalimat:
+            </p>
             <p className="italic text-white">"{exampleEnglish}"</p>
-            <p className="text-white mt-1">🗨️ Terjemahan: {exampleIndo}</p>
+            <p className="text-white mt-1">
+              🗨️ Terjemahan: {exampleIndo}
+            </p>
           </div>
         )}
 
@@ -67,7 +72,6 @@ const BotMessage = ({ message, waktu }) => {
   );
 };
 
-// Tambahkan onNewChat sebagai prop
 const ChatbotContent = ({
   loading,
   messages,
@@ -78,7 +82,7 @@ const ChatbotContent = ({
   isBotTyping,
 }) => {
   const handleKeyPress = (event) => {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && currentInput.trim() !== "") {
       onSendMessage();
     }
   };
@@ -90,11 +94,10 @@ const ChatbotContent = ({
   }, [messages, isBotTyping]);
 
   return (
-    <div className="flex flex-col h-full bg-[#000814] rounded-lg shadow-lg p-6">
+    <div className="flex flex-col h-full bg-[#000814] rounded-lg shadow-lg p-4 sm:p-6">
       {/* Bagian atas (header) */}
-      <div className="mb-6 flex justify-between items-center">
-        {" "}
-        {/* Gunakan flex untuk menempatkan tombol */}
+      {/* Perhatikan penyesuaian padding pada kontainer ini */}
+      <div className="mb-4 sm:mb-6 flex items-center justify-between"> {/* Hapus flex-col sm:flex-row dan gap-3 */}
         {loading ? (
           <div className="animate-pulse flex-1 space-x-4">
             <div className="flex-1 space-y-4 py-1">
@@ -106,30 +109,28 @@ const ChatbotContent = ({
             </div>
           </div>
         ) : (
-          <>
-            <div className="text-left">
-              {" "}
-              {/* Sesuaikan alignment judul */}
-              <h2 className="text-xl font-semibold text-white">
-                Chat dengan Bot
-              </h2>
-              <p className="text-gray-300 text-sm">Bot sedang online</p>
+          <div className="flex items-center justify-between w-full border p-2 rounded-t-2xl"> {/* Ganti flex-col dengan flex */}
+            <div className="flex items-center  ml-7 gap-3"> {/* Tambahkan flex dan gap untuk menu icon dan teks */}
+               
+                <h2 className="text-sm font-semibold text-white">
+                    Chat dengan Bot
+                </h2>
             </div>
             {/* Tombol Mulai Percakapan Baru */}
             <button
               onClick={onNewChat}
-              className="bg-[#FFC300] hover:bg-[#FFD60A] text-[#000814] font-bold py-2 px-4 rounded-lg transition duration-200 ease-in-out text-sm"
+              className="bg-[#FFC300] hover:bg-[#FFD60A] text-[#000814] font-bold py-2 px-3 rounded-lg transition duration-200 ease-in-out text-sm flex items-center gap-2" // Kurangi px untuk mobile, hapus self-start/end
             >
-              Mulai Percakapan Baru
+              <HiOutlinePencilAlt className="text-lg" />
+              <span>New Chat</span>
             </button>
-          </>
+          </div>
         )}
       </div>
 
       {/* Area tampilan chat */}
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
         {loading ? (
-          // Skeleton loading untuk area chat
           <div className="animate-pulse space-y-4 px-4">
             {[...Array(5)].map(
               (
@@ -144,8 +145,7 @@ const ChatbotContent = ({
             )}
           </div>
         ) : (
-          // Konten chat sebenarnya
-          <div className="flex flex-col px-4">
+          <div className="flex flex-col px-1 sm:px-4">
             {messages.map((msg, index) =>
               msg.tipe_pengirim === "user" ? (
                 <UserMessage
@@ -167,38 +167,26 @@ const ChatbotContent = ({
       </div>
 
       {/* Input area */}
-      <div className="mt-6 flex items-center space-x-4">
-        {loading ? (
-          <>
-            {/* Skeleton untuk input text */}
-            <div className="flex-1 h-12 bg-gray-700 rounded-lg animate-pulse"></div>
-            {/* Skeleton untuk tombol */}
-            <div className="w-24 h-12 bg-gray-700 rounded-lg animate-pulse"></div>
-          </>
-        ) : (
-          <>
-            <input
-              type="text"
-              placeholder="INPUT TEXT"
-              className="flex-1 border border-[#001D3D] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#001D3D] text-white placeholder-gray-400"
-              value={currentInput}
-              onChange={onInputChange}
-              onKeyPress={handleKeyPress}
-              disabled={loading} // Nonaktifkan input saat loading
-            />
-            <button
-              className="bg-[#003566] hover:bg-[#001D3D] text-white font-bold py-3 px-6 rounded-lg transition duration-200 ease-in-out"
-              onClick={onSendMessage}
-              disabled={loading || currentInput.trim() === ""} // Nonaktifkan tombol saat loading atau input kosong
-            >
-              Kirim
-            </button>
-          </>
-        )}
+      <div className="mt-4 px-2 pb-2 w-full max-w-screen-sm border p-2 rounded-b-2xl mx-auto">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <input
+            type="text"
+            placeholder="Masukan pertanyaan"
+            className="flex-1 border border-[#001D3D] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#001D3D] text-white placeholder-gray-400"
+            value={currentInput}
+            onChange={onInputChange}
+            onKeyPress={handleKeyPress}
+            disabled={loading}
+          />
+          <button
+            className="bg-[#003566] hover:bg-[#001D3D] text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out shrink-0"
+            onClick={onSendMessage}
+            disabled={loading || currentInput.trim() === ""}
+          >
+            Kirim
+          </button>
+        </div>
       </div>
-
-      {/* Custom scrollbar style - Ini diasumsikan sudah dipindahkan ke CSS global */}
-      {/* <style jsx>{`...`}</style> */}
     </div>
   );
 };
