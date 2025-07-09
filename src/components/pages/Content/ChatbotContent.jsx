@@ -172,7 +172,7 @@ const ChatbotContent = ({
           <input
             type="text"
             placeholder="Masukan pertanyaan"
-            className="flex-1 border border-[#003566] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#000814] text-white placeholder-gray-400 min-w-0" 
+            className="flex-1 border border-[#003566] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#000814] text-white placeholder-gray-400 min-w-0"
             value={currentInput}
             onChange={onInputChange}
             onKeyPress={handleKeyPress}
