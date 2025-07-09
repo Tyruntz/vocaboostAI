@@ -167,27 +167,26 @@ const ChatbotContent = ({
          </div>
 
          {/* Input area - Hapus rounded-b-lg untuk full width */}
-         {/* max-w-screen-sm dan mx-auto harus di luar jika Anda ingin komponen ini full width */}
-         <div className="px-4 py-3 sm:px-6 sm:py-4 bg-[#001D3D] shadow-inner">
-            <div className="flex items-center gap-2 sm:gap-4">
-               <input
-                  type="text"
-                  placeholder="Masukan pertanyaan"
-                  className="flex-1 border border-[#003566] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#000814] text-white placeholder-gray-400"
-                  value={currentInput}
-                  onChange={onInputChange}
-                  onKeyPress={handleKeyPress}
-                  disabled={loading}
-               />
-               <button
-                  className="bg-[#003566] hover:bg-[#001D3D] text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out shrink-0"
-                  onClick={onSendMessage}
-                  disabled={loading || currentInput.trim() === ""}
-               >
-                  Kirim
-               </button>
-            </div>
-         </div>
+        <div className="px-4 py-3 sm:px-6 sm:py-4 bg-[#001D3D] shadow-inner">
+        <div className="flex items-center gap-2"> {/* Kurangi gap menjadi gap-2 saja, atau bahkan gap-1 jika sangat sempit */}
+          <input
+            type="text"
+            placeholder="Masukan pertanyaan"
+            className="flex-1 border border-[#003566] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#000814] text-white placeholder-gray-400 min-w-0" 
+            value={currentInput}
+            onChange={onInputChange}
+            onKeyPress={handleKeyPress}
+            disabled={loading}
+          />
+          <button
+            className="bg-[#003566] hover:bg-[#001D3D] text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out shrink-0"
+            onClick={onSendMessage}
+            disabled={loading || currentInput.trim() === ""}
+          >
+            Kirim
+          </button>
+        </div>
+      </div>
       </div>
    );
 };
