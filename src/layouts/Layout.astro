@@ -1,43 +1,29 @@
 ---
-import '../styles/global.css';
-// Import script JavaScript
-import '../scripts/setAppHeight.js';
+import '../styles/global.css'
 ---
 
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <meta name="generator" content={Astro.generator} />
-        <title>Astro Basics</title>
-    </head>
-    <body>
-        <slot />
-    </body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Vocaboost-AI</title>
+	</head>
+	<body>
+		<slot />
+	</body>
 </html>
 
-<style is:global>
-    /* Definisi variabel CSS --vh yang akan diisi oleh JavaScript */
-    :root {
-      --vh: 1vh; /* Fallback jika JS belum jalan atau tidak didukung */
-      --header-height: 4rem; /* Sesuaikan dengan h-16 di Tailwind */
-      --footer-height: 5rem;  /* Sesuaikan dengan h-20 di Tailwind */
-    }
-
-    html {
-        /* Gunakan --vh untuk tinggi keseluruhan */
-        height: calc(var(--vh, 1vh) * 100);
-        overflow: hidden; /* Penting: mencegah html scroll */
-    }
-    body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%; /* Isi 100% dari html yang sudah dihitung dengan --vh */
-        overflow: hidden; /* Penting: mencegah body scroll */
-        display: flex;
-        flex-direction: column;
-    }
+<style>
+	html{
+		height: -webkit-fill-available;
+	}
+	body {
+		margin: 0;
+		width: 100%;
+		height: 100vh;
+		height: -webkit-fill-available;
+	}
 </style>
