@@ -4,26 +4,42 @@ import '../styles/global.css'
 
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" /> <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="generator" content={Astro.generator} />
+        <title>Vocaboost-AI</title>
+    </head>
+    <body>
+        <slot />
+    </body>
 </html>
 
-<style>
-	html{
-		height: -webkit-fill-available;
-	}
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100svh;
-		height: -webkit-fill-available;
-	}
+<style is:global> {/* PENTING: Tambahkan is:global */}
+    html {
+        /* Gunakan 100% dari tinggi yang tersedia, termasuk bilah browser */
+        /* height: -webkit-fill-available; ini bagus, tapi kita juga perlu fallback dan memastikan tidak ada scroll pada html/body */
+        height: 100%; /* Fallback untuk browser lain */
+        min-height: 100vh; /* Pastikan minimal 100vh */
+        min-height: -webkit-fill-available; /* Khusus Webkit untuk mengatasi masalah bilah alamat */
+        overflow: hidden; /* Penting: mencegah html scroll */
+    }
+    body {
+        margin: 0;
+        padding: 0; /* Pastikan tidak ada padding bawaan */
+        width: 100%;
+        height: 100%; /* Biarkan body mengisi 100% tinggi html */
+        min-height: 100vh; /* Pastikan minimal 100vh */
+        min-height: -webkit-fill-available; /* Pastikan juga ini untuk body */
+        overflow: hidden; /* Penting: mencegah body scroll */
+        display: flex; /* Jika komponen ChatbotContent adalah satu-satunya child, bisa bantu */
+        flex-direction: column; /* Untuk menempatkan ChatbotContent secara vertikal */
+    }
+
+    /* Definisi variabel CSS jika Anda menggunakan `var(--header-height)` dll. */
+    /* Ini bisa juga ditempatkan di global.css jika Anda mau */
+    :root {
+      --header-height: 4rem; /* Sesuaikan dengan tinggi header yang Anda set di ChatbotContent, misal h-16 */
+      --footer-height: 5rem;  /* Sesuaikan dengan tinggi footer yang Anda set di ChatbotContent, misal h-20 */
+    }
 </style>
