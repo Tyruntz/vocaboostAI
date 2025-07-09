@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+:root {
+  --header-height: 4rem; /* Sesuaikan dengan h-16 = 64px */
+  --footer-height: 5rem;  /* Sesuaikan dengan h-20 = 80px */
+}
+
+
 .custom-scrollbar::-webkit-scrollbar {
    width: 8px;
 }
