@@ -206,7 +206,7 @@ const HomePage = () => {
          {/* Sidebar - Left Section */}
          <div
             className={`
-    fixed h-screen bg-[#001D3D] text-white py-4 rounded-r-lg shadow-lg z-20
+    fixed h-screen bg-[#001D3D] text-white py-4 shadow-lg z-20
     transition-all duration-300 ease-in-out px-4
     ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"} w-64
     md:w-64 md:translate-x-0 md:relative md:flex-shrink-0 flex flex-col
@@ -360,7 +360,7 @@ const HomePage = () => {
          )}
 
          {/* Main Content Area - Right Section */}
-         <div className="flex-grow bg-[#000814] p-2 rounded-lg shadow-xl flex flex-col overflow-hidden text-white">
+         <div className="flex-grow bg-[#000814] lg:p-5 rounded-lg shadow-xl flex flex-col overflow-hidden text-white">
             {activeTab === "home" && (
                <div className="flex flex-col justify-center items-center h-full text-center animate-fade-in">
                   <h1 className="text-4xl font-bold text-[#FFD60A] mb-4">
