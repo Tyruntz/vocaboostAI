@@ -1,8 +1,5 @@
 // ChatbotContent.jsx
-import React from "react";
-import { useEffect, useRef } from "react";
-import { HiOutlinePencilAlt } from "react-icons/hi";
-import { HiMenuAlt3 } from "react-icons/hi"; // Jika Anda menggunakan ikon menu
+import React, { useEffect, useRef } from "react";
 
 const formatWaktu = (iso) => {
   if (!iso) return "";
@@ -72,20 +69,9 @@ const BotMessage = ({ message, waktu }) => {
   );
 };
 
-const ChatbotContent = ({
-  loading,
-  messages,
-  currentInput,
-  onInputChange,
-  onSendMessage,
-  onNewChat,
-  isBotTyping,
-}) => {
-  const handleKeyPress = (event) => {
-    if (event.key === "Enter" && currentInput.trim() !== "") {
-      onSendMessage();
-    }
-  };
+// ChatbotContent sekarang hanya menerima `messages` dan `isBotTyping`
+// Karena input, header, dan footer ditangani di Homepage
+const ChatbotContent = ({ loading, messages, isBotTyping }) => {
   const messagesEndRef = useRef(null);
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -93,52 +79,14 @@ const ChatbotContent = ({
     }
   }, [messages, isBotTyping]);
 
-  // Definisikan tinggi header dan footer sebagai variabel untuk referensi padding
-  const headerHeight = 'h-16'; // Contoh: 4rem = 64px
-  const footerHeight = 'h-20'; // Contoh: 5rem = 80px (sesuaikan dengan py-3/4 dan tinggi input/button)
-
   return (
-    // Kontainer utama - Tidak perlu h-full, biarkan flex mengisi ruang yang tersedia
-    // Posisikan secara relatif jika ingin menggunakan absolute di dalamnya, atau biarkan default
-    <div className="flex flex-col w-full h-screen bg-[#000814]"> {/* Ganti h-full menjadi h-screen untuk mengambil seluruh tinggi viewport */}
+    // Kontainer ini akan mengisi ruang antara header dan footer yang fixed
+    // bg-[#000814] akan diatur oleh parentnya di Homepage
+    <div className="flex flex-col h-full bg-[#000814] rounded-lg shadow-lg"> {/* Pertahankan ini untuk efek rounded/shadow di desktop */}
+      {/* Hapus Header dari sini */}
 
-      {/* Header - Fixed di bagian atas */}
-      <div className={`fixed top-0 left-0 w-full bg-[#001D3D] flex items-center justify-between shadow-md px-4 py-3 sm:px-6 ${headerHeight} z-10`}>
-        {loading ? (
-          <div className="animate-pulse flex-1 space-x-4">
-            <div className="flex-1 space-y-4 py-1">
-              <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-700 rounded w-5/6"></div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3">
-              <HiMenuAlt3 className="w-6 h-6 text-white cursor-pointer" />
-              <h2 className="text-lg sm:text-xl font-semibold text-white">
-                Chat dengan Bot
-              </h2>
-            </div>
-            <button
-              onClick={onNewChat}
-              className="bg-[#FFC300] hover:bg-[#FFD60A] text-[#000814] font-bold py-2 px-3 rounded-lg transition duration-200 ease-in-out text-sm flex items-center gap-2"
-            >
-              <HiOutlinePencilAlt className="text-lg" />
-              <span>New Chat</span>
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Area tampilan chat - Konten utama yang dapat di-scroll */}
-      {/* Tambahkan padding-top dan padding-bottom sesuai tinggi header dan footer */}
-      <div className={`flex-1 overflow-y-auto px-4 py-4 custom-scrollbar pt-[var(--header-height)] pb-[var(--footer-height)]`}>
-          {/* Untuk menggunakan custom CSS variables di Tailwind, Anda mungkin perlu mengonfigurasi `tailwind.config.js` atau menggunakan inline style */}
-          {/* Alternatif: menggunakan padding-top dan padding-bottom dengan nilai fix Tailwing */}
-          {/* <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar pt-16 pb-20"> */}
+      {/* Area tampilan chat */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar"> {/* Padding sudah ditangani oleh Homepage */}
         {loading ? (
           <div className="animate-pulse space-y-4">
             {[...Array(5)].map((_, i) => (
@@ -170,27 +118,7 @@ const ChatbotContent = ({
         )}
       </div>
 
-      {/* Input area - Fixed di bagian bawah */}
-      <div className={`fixed bottom-0 left-0 w-full bg-[#001D3D] shadow-inner px-4 py-3 sm:px-6 ${footerHeight} z-10`}>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Masukan pertanyaan"
-            className="flex-1 border border-[#003566] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#000814] text-white placeholder-gray-400 min-w-0"
-            value={currentInput}
-            onChange={onInputChange}
-            onKeyPress={handleKeyPress}
-            disabled={loading}
-          />
-          <button
-            className="bg-[#003566] hover:bg-[#001D3D] text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out shrink-0"
-            onClick={onSendMessage}
-            disabled={loading || currentInput.trim() === ""}
-          >
-            Kirim
-          </button>
-        </div>
-      </div>
+      {/* Hapus Input area dari sini */}
     </div>
   );
 };
