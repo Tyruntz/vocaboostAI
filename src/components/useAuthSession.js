@@ -33,24 +33,32 @@ export const useAuthSession = () => {
 
             if (data?.session) {
                const user = data.session.user;
-               setUserLogin(user);
-               setUserId(user.id);
 
-               // Cek role user dari tabel profiles
+               // Fetch full profile
                const { data: profile, error: profileError } = await supabase
                   .from("profiles")
-                  .select("role")
+                  .select("*")
                   .eq("id", user.id)
                   .single();
 
                if (profileError) {
-                  console.error("Gagal ambil role:", profileError.message);
+                  console.error("Gagal ambil profil:", profileError.message);
+               }
+
+               // Gabungkan auth user dan profil
+               const userWithProfile = {
+                  ...user,
+                  profile, // simpan semua info profil di dalam properti `profile`
+               };
+
+               setUserLogin(userWithProfile);
+               setUserId(user.id);
+
+               // Redirect jika admin
+               if (profile?.role === "admin") {
+                  navigate("/admin-dashboard");
                } else {
-                  if (profile.role === "admin") {
-                     navigate("/admin-dashboard");
-                  } else {
-                     console.log("Login sebagai user biasa");
-                  }
+                  console.log("Login sebagai user biasa");
                }
             } // Di dalam useEffect
             else if (!data?.session) {
@@ -86,6 +94,6 @@ export const useAuthSession = () => {
       setLoading,
       setUserLogin,
       setError,
-      setUserId
+      setUserId,
    };
 };

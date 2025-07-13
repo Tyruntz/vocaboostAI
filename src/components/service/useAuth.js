@@ -77,7 +77,7 @@ const useAuth = () => {
             if (userWithProfile?.profile?.role === "admin") {
                 console.log("User is admin, consider redirecting to /admin-dashboard.");
             } else {
-                console.log("User is regular user, consider redirecting to /grammargo-home.");
+                console.log("User is regular user, consider redirecting to /vocaboostAI-home.");
             }
           }
         } else {

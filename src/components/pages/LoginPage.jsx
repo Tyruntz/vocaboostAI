@@ -29,7 +29,7 @@ const LoginPage = () => {
       setMessageType("success");
 
       setTimeout(() => {
-        window.location.href = "/grammargo-home"; // Arahkan ke halaman utama setelah login
+        window.location.href = "/vocaboostAI-home"; // Arahkan ke halaman utama setelah login
       }, 1500);
     } catch (error) {
       setMessage(`Gagal login: ${error.message}`);

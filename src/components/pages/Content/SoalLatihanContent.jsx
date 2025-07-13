@@ -96,6 +96,10 @@ const SoalLatihanContent = ({
    const [error, setError] = useState(null);
    const [topicName, setTopicName] = useState("");
    const [currentSessionId, setCurrentSessionId] = useState(null);
+   const [loadingNextQuestion, setLoadingNextQuestion] = useState(false);
+   const [usedQuestionIds, setUsedQuestionIds] = useState([]);
+   const [aiQuestionCount, setAiQuestionCount] = useState(0);
+   const MAX_AI_QUESTIONS = 3;
 
    // Effect untuk memuat dan mengacak soal berdasarkan topicId
    useEffect(() => {
@@ -144,26 +148,49 @@ const SoalLatihanContent = ({
             }
 
             // Panggil API endpoint untuk mengambil soal berdasarkan ID materi
-            const response = await fetch(
-               `/api/grammar/soal/get-by-materi/${topicId}.json`
-            );
-            if (!response.ok) {
-               const errorData = await response.json();
-               throw new Error(
-                  errorData.error || `HTTP error! status: ${response.status}`
+            let soalFromDB = [];
+            let soalFromAI = [];
+
+            const randomChoice = Math.random(); // generate 0 - 1
+
+            if (randomChoice < 0.5) {
+               // Ambil soal dari database
+               const response = await fetch(
+                  `/api/grammar/soal/get-by-materi/${topicId}.json`
                );
+               const data = await response.json();
+               if (!Array.isArray(data.soal))
+                  throw new Error("Format data soal tidak valid.");
+               soalFromDB = data.soal;
+            } else {
+               // Ambil soal dari AI
+               const response = await fetch(
+                  `/api/grammar/soal/generate-by-topic/${topicId}.json`
+               );
+               const data = await response.json();
+               if (!data.soal) throw new Error("Gagal mendapatkan soal AI.");
+               soalFromAI = [data.soal]; // Masukkan ke array agar bisa di-shuffle juga
             }
 
-            const data = await response.json();
-
-            // Pastikan data.soal adalah array
-            if (!Array.isArray(data.soal)) {
-               throw new Error("Format data soal tidak valid dari API.");
+            // Gabungkan dan acak
+            const mergedQuestions = [...soalFromDB, ...soalFromAI].sort(
+               () => Math.random() - 0.5
+            );
+            if (mergedQuestions.length > 0) {
+               setUsedQuestionIds([mergedQuestions[0].id]);
             }
 
-            // Acak urutan soal
-            const shuffledQuestions = data.soal.sort(() => Math.random() - 0.5);
-            setQuestions(shuffledQuestions);
+            setQuestions(Array(10).fill(null));
+            try {
+               const firstSoal = await fetchSingleQuestion();
+               setQuestions((prev) => {
+                  const updated = [...prev];
+                  updated[0] = firstSoal;
+                  return updated;
+               });
+            } catch (err) {
+               setError("Gagal memuat soal pertama: " + err.message);
+            }
          } catch (err) {
             console.error("Error fetching questions:", err);
             setError(`Gagal memuat soal: ${err.message}`);
@@ -174,6 +201,96 @@ const SoalLatihanContent = ({
 
       fetchAndShuffleQuestions();
    }, [topicId]); // Bergantung pada topicId
+   const simpanSoalAIKeDatabase = async (soal, topicId) => {
+      try {
+         const response = await fetch("/api/grammar/soal/add.json", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+               topic_id: topicId,
+               text_pertanyaan: soal.text_pertanyaan,
+               tipe_pertanyaan: soal.tipe_pertanyaan,
+               opsi: soal.opsi || {}, // untuk tipe selain pilihan ganda akan jadi {}
+               jawaban_benar: soal.jawaban_benar,
+               penjelasan: soal.penjelasan || "",
+
+               level: soal.level || "mudah", // default jika tidak ada
+               is_ai_generated: true, // menandai ini soal dari AI
+            }),
+         });
+
+         if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Gagal menyimpan soal AI ke database:", errorData);
+            return null;
+         }
+
+         const result = await response.json();
+         return result.soal; // berisi ID dari DB
+      } catch (err) {
+         console.error("Terjadi error saat simpan soal AI:", err);
+         return null;
+      }
+   };
+
+   const fetchSingleQuestion = async () => {
+      const ambilDariDatabase = async () => {
+         const response = await fetch(
+            `/api/grammar/soal/get-by-materi/${topicId}.json`
+         );
+         const data = await response.json();
+         if (Array.isArray(data.soal) && data.soal.length > 0) {
+            const filtered = data.soal.filter(
+               (soal) => !usedQuestionIds.includes(soal.id)
+            );
+            if (filtered.length === 0)
+               throw new Error("Semua soal dari DB sudah digunakan.");
+            const randomSoal =
+               filtered[Math.floor(Math.random() * filtered.length)];
+            return randomSoal;
+         } else {
+            throw new Error("Soal dari database kosong.");
+         }
+      };
+
+      const bolehPakaiAI = aiQuestionCount < MAX_AI_QUESTIONS;
+      const randomChoice = Math.random(); // 0 - 1
+
+      if (bolehPakaiAI && randomChoice < 0.5) {
+         try {
+            const response = await fetch(
+               `/api/grammar/soal/generate-by-topic/${topicId}.json`
+            );
+
+            const status = response.status;
+
+            // Tetap naikin counter walaupun gagal
+            setAiQuestionCount((prev) => prev + 1);
+
+            if (status === 429) {
+               console.warn("Quota Gemini habis, fallback ke database...");
+               return await ambilDariDatabase();
+            }
+
+            const data = await response.json();
+            if (!data.soal) throw new Error("Gagal ambil soal dari AI.");
+
+            const soalDisimpan = await simpanSoalAIKeDatabase(
+               data.soal,
+               topicId
+            );
+            if (!soalDisimpan)
+               throw new Error("Soal AI gagal disimpan ke database.");
+
+            return soalDisimpan;
+         } catch (err) {
+            console.warn("Gagal ambil soal AI, fallback ke DB:", err.message);
+            return await ambilDariDatabase();
+         }
+      } else {
+         return await ambilDariDatabase();
+      }
+   };
 
    // Fungsi untuk menangani perubahan input jawaban (isian singkat)
    const handleAnswerChange = (e) => {
@@ -226,6 +343,16 @@ const SoalLatihanContent = ({
    // Fungsi untuk memvalidasi jawaban
    const validateAnswer = () => {
       const currentQuestion = questions[currentQuestionIndex];
+
+      if (!currentQuestion) {
+         return (
+            <div className="text-center text-white mt-10">
+               <p>Memuat soal berikutnya...</p>
+               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-400 mx-auto mt-4"></div>
+            </div>
+         );
+      }
+
       let correct = false;
       let feedbackMessage = "";
       let scoreEarned = 0;
@@ -274,14 +401,34 @@ const SoalLatihanContent = ({
    };
 
    // Fungsi untuk melanjutkan ke soal berikutnya atau menyelesaikan latihan
-   const handleNextQuestion = () => {
-      if (currentQuestionIndex < questions.length - 1) {
-         setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+   const handleNextQuestion = async () => {
+      const nextIndex = currentQuestionIndex + 1;
+
+      if (nextIndex < 10) {
+         setLoadingNextQuestion(true); // Mulai loading
+
+         if (!questions[nextIndex]) {
+            try {
+               const newSoal = await fetchSingleQuestion();
+
+               setQuestions((prev) => {
+                  const updated = [...prev];
+                  updated[nextIndex] = newSoal;
+                  return updated;
+               });
+
+               setUsedQuestionIds((prevIds) => [...prevIds, newSoal.id]);
+            } catch (err) {
+               console.error("Gagal memuat soal baru:", err);
+            }
+         }
+
+         setCurrentQuestionIndex(nextIndex);
          setUserAnswer("");
          setFeedback(null);
          setIsAnswerSubmitted(false);
+         setLoadingNextQuestion(false); // Selesai loading
       } else {
-         // Latihan Selesai: Tampilkan modal hasil
          setShowResultModal(true);
       }
    };
@@ -368,6 +515,19 @@ const SoalLatihanContent = ({
    }
 
    const currentQuestion = questions[currentQuestionIndex];
+   if (!currentQuestion) {
+      return (
+         <div className="text-red-500 font-semibold flex flex-col items-center justify-center h-full">
+            Soal tidak tersedia. Silakan coba lagi nanti.
+            <button
+               onClick={onBackToLearn}
+               className="mt-4 px-6 py-3 bg-[#FFC300] border border-[#FFC300] text-[#000814] rounded-lg font-semibold hover:text-white hover:bg-[#001D3D] transition duration-200 shadow-md"
+            >
+               Kembali
+            </button>
+         </div>
+      );
+   }
 
    return (
       <div className="flex flex-col h-full border p-4 bg-[#000814] rounded-lg shadow-lg">
@@ -390,101 +550,112 @@ const SoalLatihanContent = ({
          {/* Area Soal */}
          <div className="flex-grow bg-[#001D3D] p-6 rounded-lg shadow-inner flex flex-col justify-between">
             {/* Teks Pertanyaan */}
-            <p className="text-xl text-white mb-6 leading-relaxed">
-               {currentQuestion.text_pertanyaan}{" "}
-               {/* Menggunakan text_pertanyaan */}
-            </p>
+            {loadingNextQuestion ? (
+               // 🌀 Loading Soal Selanjutnya
+               <div className="flex flex-col items-center justify-center h-full">
+                  <h2 className="text-xl text-[#FFC300] font-semibold mb-4">
+                     Memuat Soal Berikutnya...
+                  </h2>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FFC300]"></div>
+               </div>
+            ) : (
+               <>
+                  {/* Teks Pertanyaan */}
+                  <p className="text-xl text-white mb-6 leading-relaxed">
+                     {currentQuestion.text_pertanyaan}
+                  </p>
 
-            {/* Area Input Jawaban (Dinamis) */}
-            <div className="mb-8 flex flex-col space-y-4">
-               {/* Tipe: Isian Singkat */}
-               {currentQuestion.tipe_pertanyaan === "isian_kosong" && (
-                  <input
-                     type="text"
-                     className="w-full px-4 py-3 border-2 bg-[#003566] border-[#003566] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFC300] text-white disabled:bg-gray-700 placeholder-gray-400"
-                     placeholder="Ketik jawaban Anda di sini..."
-                     value={userAnswer}
-                     onChange={handleAnswerChange}
-                     disabled={isAnswerSubmitted}
-                  />
-               )}
+                  {/* Area Input Jawaban (Dinamis) */}
+                  <div className="mb-8 flex flex-col space-y-4">
+                     {currentQuestion.tipe_pertanyaan === "isian_kosong" && (
+                        <input
+                           type="text"
+                           className="w-full px-4 py-3 border-2 bg-[#003566] border-[#003566] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFC300] text-white disabled:bg-gray-700 placeholder-gray-400"
+                           placeholder="Ketik jawaban Anda di sini..."
+                           value={userAnswer}
+                           onChange={handleAnswerChange}
+                           disabled={isAnswerSubmitted}
+                        />
+                     )}
 
-               {/* Tipe: Pilihan Ganda */}
-               {currentQuestion.tipe_pertanyaan === "pilihan_ganda" &&
-                  currentQuestion.opsi && (
-                     <div className="flex flex-col space-y-3">
-                        {Object.keys(currentQuestion.opsi).map(
-                           (optionKey, index) => (
-                              <label
-                                 key={index}
-                                 className="flex items-center text-white cursor-pointer"
-                              >
-                                 <input
-                                    type="radio"
-                                    name="pilihanGanda"
-                                    value={optionKey} // Menggunakan 'a', 'b', 'c', 'd' sebagai nilai radio
-                                    checked={userAnswer === optionKey}
-                                    onChange={() =>
-                                       handleOptionSelect(optionKey)
-                                    }
-                                    disabled={isAnswerSubmitted}
-                                    className="form-radio h-5 w-5 text-[#FFC300] border-[#003566] focus:ring-[#FFC300]"
-                                 />
-                                 <span className="ml-3 text-lg">{`${optionKey.toUpperCase()}. ${
-                                    currentQuestion.opsi[optionKey]
-                                 }`}</span>
-                              </label>
-                           )
+                     {currentQuestion.tipe_pertanyaan === "pilihan_ganda" &&
+                        currentQuestion.opsi && (
+                           <div className="flex flex-col space-y-3">
+                              {Object.keys(currentQuestion.opsi).map(
+                                 (optionKey, index) => (
+                                    <label
+                                       key={index}
+                                       className="flex items-center text-white cursor-pointer"
+                                    >
+                                       <input
+                                          type="radio"
+                                          name="pilihanGanda"
+                                          value={optionKey}
+                                          checked={userAnswer === optionKey}
+                                          onChange={() =>
+                                             handleOptionSelect(optionKey)
+                                          }
+                                          disabled={isAnswerSubmitted}
+                                          className="form-radio h-5 w-5 text-[#FFC300] border-[#003566] focus:ring-[#FFC300]"
+                                       />
+                                       <span className="ml-3 text-lg">
+                                          {`${optionKey.toUpperCase()}. ${
+                                             currentQuestion.opsi[optionKey]
+                                          }`}
+                                       </span>
+                                    </label>
+                                 )
+                              )}
+                           </div>
+                        )}
+
+                     {currentQuestion.tipe_pertanyaan === "benar_salah" && (
+                        <div className="flex space-x-6 justify-center">
+                           <label className="flex items-center text-white cursor-pointer">
+                              <input
+                                 type="radio"
+                                 name="benarSalah"
+                                 value="benar"
+                                 checked={userAnswer === "benar"}
+                                 onChange={() => handleOptionSelect("benar")}
+                                 disabled={isAnswerSubmitted}
+                                 className="form-radio h-5 w-5 text-[#FFC300] border-[#003566] focus:ring-[#FFC300]"
+                              />
+                              <span className="ml-2 text-lg">BENAR</span>
+                           </label>
+                           <label className="flex items-center text-white cursor-pointer">
+                              <input
+                                 type="radio"
+                                 name="benarSalah"
+                                 value="salah"
+                                 checked={userAnswer === "salah"}
+                                 onChange={() => handleOptionSelect("salah")}
+                                 disabled={isAnswerSubmitted}
+                                 className="form-radio h-5 w-5 text-[#FFC300] border-[#003566] focus:ring-[#FFC300]"
+                              />
+                              <span className="ml-2 text-lg">SALAH</span>
+                           </label>
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Area Umpan Balik */}
+                  {feedback && (
+                     <div
+                        className={`p-4 rounded-lg text-white font-semibold mb-6 shadow-sm ${
+                           feedback.isCorrect ? "bg-green-600" : "bg-red-600"
+                        }`}
+                     >
+                        {feedback.message}
+                        {feedback.explanation && (
+                           <p className="mt-2 text-sm italic">
+                              Penjelasan: {feedback.explanation}
+                           </p>
                         )}
                      </div>
                   )}
-
-               {/* Tipe: Benar/Salah */}
-               {currentQuestion.tipe_pertanyaan === "benar_salah" && (
-                  <div className="flex space-x-6 justify-center">
-                     <label className="flex items-center text-white cursor-pointer">
-                        <input
-                           type="radio"
-                           name="benarSalah"
-                           value="benar" // Sesuaikan dengan nilai jawaban benar/salah di DB
-                           checked={userAnswer === "benar"}
-                           onChange={() => handleOptionSelect("benar")}
-                           disabled={isAnswerSubmitted}
-                           className="form-radio h-5 w-5 text-[#FFC300] border-[#003566] focus:ring-[#FFC300]"
-                        />
-                        <span className="ml-2 text-lg">BENAR</span>
-                     </label>
-                     <label className="flex items-center text-white cursor-pointer">
-                        <input
-                           type="radio"
-                           name="benarSalah"
-                           value="salah" // Sesuaikan dengan nilai jawaban benar/salah di DB
-                           checked={userAnswer === "salah"}
-                           onChange={() => handleOptionSelect("salah")}
-                           disabled={isAnswerSubmitted}
-                           className="form-radio h-5 w-5 text-[#FFC300] border-[#003566] focus:ring-[#FFC300]"
-                        />
-                        <span className="ml-2 text-lg">SALAH</span>
-                     </label>
-                  </div>
-               )}
-            </div>
-
-            {/* Area Umpan Balik */}
-            {feedback && (
-               <div
-                  className={`p-4 rounded-lg text-white font-semibold mb-6 shadow-sm
-                        ${feedback.isCorrect ? "bg-green-600" : "bg-red-600"}`}
-               >
-                  {feedback.message}
-                  {feedback.explanation && (
-                     <p className="mt-2 text-sm italic">
-                        Penjelasan: {feedback.explanation}
-                     </p>
-                  )}
-               </div>
+               </>
             )}
-
             {/* Tombol Aksi */}
             <div className="flex justify-center mt-auto">
                {!isAnswerSubmitted ? (

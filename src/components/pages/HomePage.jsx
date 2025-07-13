@@ -416,7 +416,9 @@ const HomePage = () => {
             )}
 
             {activeTab === "profile" && (
+               <div className="min-h-screen flex items-center justify-center bg-[#000814]">
                <UserProfileContent user={userLogin} onLogout={handleLogout} />
+            </div>
             )}
          </div>
       </div>

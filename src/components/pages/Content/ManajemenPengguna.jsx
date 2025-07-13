@@ -2,32 +2,28 @@ import React, { useState, useEffect } from "react";
 
 // Komponen Modal Statistik Pengguna
 const UserStatisticsModal = ({ user, onClose }) => {
-   if (!user) return null; // Jangan render jika tidak ada user
+   const [stats, setStats] = useState(null);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState(null);
 
-   // Dummy data statistik untuk pengguna yang dipilih
-   // Di aplikasi nyata, Anda akan fetch data statistik ini dari API berdasarkan user.id
-   const userStatistics = {
-      practiceCompletion: {
-         completed: Math.floor(Math.random() * 100), // Random percentage for demo
-         totalQuestions: 150,
-         completedQuestions: Math.floor(Math.random() * 150),
-      },
-      answerAccuracy: Math.floor(Math.random() * 40) + 60, // Random accuracy between 60-100%
-      mostAccessedMaterial: [
-         {
-            name: "Grammar Basics",
-            accesses: Math.floor(Math.random() * 100) + 50,
-         },
-         {
-            name: "Vocabulary Expansion",
-            accesses: Math.floor(Math.random() * 100) + 50,
-         },
-         {
-            name: "Listening Comprehension",
-            accesses: Math.floor(Math.random() * 100) + 50,
-         },
-      ],
-   };
+   useEffect(() => {
+      const fetchStats = async () => {
+         try {
+            const res = await fetch(`/api/user/statistik/${user.id}`);
+            if (!res.ok) throw new Error("Gagal mengambil statistik.");
+            const data = await res.json();
+            setStats(data);
+         } catch (err) {
+            setError(err.message);
+         } finally {
+            setLoading(false);
+         }
+      };
+
+      if (user?.id) fetchStats();
+   }, [user]);
+
+   if (!user) return null;
 
    return (
       <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4 font-sans">
@@ -45,71 +41,69 @@ const UserStatisticsModal = ({ user, onClose }) => {
                </button>
             </div>
 
-            <div className="space-y-6">
-               {/* Card for Practice Question Completion */}
-               <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-                  <h3 className="text-xl font-bold mb-2">
-                     Penyelesaian Soal Latihan
-                  </h3>
-                  <p className="text-3xl font-extrabold mb-1">
-                     {userStatistics.practiceCompletion.completed}%
-                  </p>
-                  <p className="text-sm opacity-90">
-                     {userStatistics.practiceCompletion.completedQuestions} dari{" "}
-                     {userStatistics.practiceCompletion.totalQuestions} soal
-                     diselesaikan
-                  </p>
-                  <div className="w-full bg-blue-400 rounded-full h-2 mt-3">
-                     <div
-                        className="bg-white rounded-full h-2"
-                        style={{
-                           width: `${userStatistics.practiceCompletion.completed}%`,
-                        }}
-                     ></div>
+            {loading ? (
+               <p className="text-center">Memuat statistik...</p>
+            ) : error ? (
+               <p className="text-center text-red-500">{error}</p>
+            ) : stats ? (
+               <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
+                     <h3 className="text-xl font-bold mb-2">
+                        Penyelesaian Soal Latihan
+                     </h3>
+                     <p className="text-3xl font-extrabold mb-1">
+                        {stats.penyelesaian}%
+                     </p>
+                     <p className="text-sm opacity-90">
+                        {stats.total_dijawab} dari {stats.total_soal} soal
+                        diselesaikan
+                     </p>
+                     <div className="w-full bg-blue-400 rounded-full h-2 mt-3">
+                        <div
+                           className="bg-white rounded-full h-2"
+                           style={{ width: `${stats.penyelesaian}%` }}
+                        ></div>
+                     </div>
                   </div>
-               </div>
 
-               {/* Card for Answer Accuracy Rate */}
-               <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-                  <h3 className="text-xl font-bold mb-2">
-                     Tingkat Akurasi Jawaban
-                  </h3>
-                  <p className="text-3xl font-extrabold mb-1">
-                     {userStatistics.answerAccuracy}%
-                  </p>
-                  <p className="text-sm opacity-90">
-                     Rata-rata akurasi semua soal latihan
-                  </p>
-                  <div className="w-full bg-green-400 rounded-full h-2 mt-3">
-                     <div
-                        className="bg-white rounded-full h-2"
-                        style={{ width: `${userStatistics.answerAccuracy}%` }}
-                     ></div>
+                  <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
+                     <h3 className="text-xl font-bold mb-2">
+                        Tingkat Akurasi Jawaban
+                     </h3>
+                     <p className="text-3xl font-extrabold mb-1">
+                        {stats.akurasi}%
+                     </p>
+                     <p className="text-sm opacity-90">
+                        Rata-rata akurasi semua soal latihan
+                     </p>
+                     <div className="w-full bg-green-400 rounded-full h-2 mt-3">
+                        <div
+                           className="bg-white rounded-full h-2"
+                           style={{ width: `${stats.akurasi}%` }}
+                        ></div>
+                     </div>
                   </div>
-               </div>
 
-               {/* Card for Most Accessed Learning Material */}
-               <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-                  <h3 className="text-xl font-bold mb-2">
-                     Materi Paling Sering Diakses
-                  </h3>
-                  <ul className="list-disc pl-5 space-y-1 text-sm">
-                     {userStatistics.mostAccessedMaterial.map(
-                        (material, index) => (
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
+                     <h3 className="text-xl font-bold mb-2">
+                        Materi Paling Sering Diakses
+                     </h3>
+                     <ul className="list-disc pl-5 space-y-1 text-sm">
+                        {stats.topik_teratas?.map((material, index) => (
                            <li
                               key={index}
                               className="flex justify-between items-center"
                            >
-                              <span>{material.name}</span>
+                              <span>{material.nama_topik}</span>
                               <span className="font-semibold text-base">
-                                 {material.accesses} kali
+                                 {material.total_akses} kali
                               </span>
                            </li>
-                        )
-                     )}
-                  </ul>
+                        ))}
+                     </ul>
+                  </div>
                </div>
-            </div>
+            ) : null}
          </div>
       </div>
    );
@@ -177,6 +171,30 @@ const ManajemenPengguna = () => {
       fetchUsers();
    }, []); // Empty dependency array means this runs once on component mount
 
+   const handleDelete = async (userId) => {
+      const konfirmasi = confirm("Yakin ingin menghapus pengguna ini?");
+      if (!konfirmasi) return;
+
+      try {
+         const response = await fetch(`/api/user/delete/${userId}`, {
+            method: "DELETE",
+         });
+
+         const result = await response.json();
+
+         if (response.ok) {
+            alert("Pengguna berhasil dihapus.");
+            // refresh list user setelah dihapus
+            setUserList((prev) => prev.filter((u) => u.id !== userId));
+         } else {
+            alert("Gagal menghapus pengguna: " + result.error);
+         }
+      } catch (err) {
+         console.error("Error saat hapus user:", err);
+         alert("Terjadi kesalahan saat menghapus.");
+      }
+   };
+
    // Function to handle clicking on a user row
    const handleUserClick = (userItem) => {
       setSelectedUserForStats(userItem);
@@ -236,7 +254,7 @@ const ManajemenPengguna = () => {
                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
                            Opsi
-                        </th>{" "}
+                        </th>
                         {/* Added Opsi column header */}
                      </tr>
                   </thead>
@@ -270,7 +288,13 @@ const ManajemenPengguna = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                  {/* Added Hapus button */}
-                                 <button className="px-4 py-2 font-semibold text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
+                                 <button
+                                    className="px-4 py-2 font-semibold text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                                    onClick={(e) => {
+                                       e.stopPropagation();
+                                       handleDelete(userItem.id);
+                                    }}
+                                 >
                                     Hapus
                                  </button>
                               </td>
