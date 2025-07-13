@@ -32,10 +32,11 @@ const LoginPage = () => {
         window.location.href = "/vocaboostAI-home"; // Arahkan ke halaman utama setelah login
       }, 1500);
     } catch (error) {
-      if (error.status === 400) {
+      if (error.message === "Invalid login credentials") {
         setMessage("Email atau kata sandi salah. Silakan coba lagi.");
+      } else {
+        setMessage(`Gagal login: ${error.message}`);
       }
-      setMessage(`Gagal login: ${error.message}`);
       setMessageType("error");
     } finally {
       setLoading(false);
