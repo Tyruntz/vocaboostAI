@@ -1,5 +1,5 @@
 // import { translate } from '@vitalets/google-translate-api';
-const API_URL = "https://vkp2i6z18hpzcd-8000.proxy.runpod.net/generate"; // Pastikan URL ini benar
+const API_URL = "https://ets6fgt16lfyrc-8000.proxy.runpod.net/generate"; // Pastikan URL ini benar
 import { generateFromModel } from "./chatApi";
 
 export async function generateLlamaText(
@@ -29,10 +29,7 @@ export async function generateLlamaText(
        **Gaya Bahasa**: Gunakan bahasa yang edukatif, memotivasi, dan mudah dipahami.
         `;
 
-      // PENTING: Struktur fullPrompt yang memaksa model untuk langsung menjawab.
-      // Kita tidak akan lagi menggunakan "Siswa:" di dalam prompt yang dikirimkan.
-      // Model sudah diinstruksikan untuk tidak mengulang pola dialog.
-      const fullPrompt = `<s>[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\n${userInput} [/INST] `; // Tambahkan spasi di akhir [/INST]
+      const fullPrompt = `<s>[INST] <<SYS>>\n${systemPrompt}\n<</SYS>>\n\n${userInput} [/INST] `; 
 
       const response = await fetch(API_URL, {
          method: "POST",
@@ -52,8 +49,6 @@ export async function generateLlamaText(
 
       let generatedText = data.generated_text;
 
-      // --- Pemrosesan Output yang Lebih Robust ---
-      // 1. Cari akhir dari tag instruksi [/INST]
       const endOfInstructionTag = "[/INST]";
       let cleanText = generatedText;
       const startIndex = generatedText.indexOf(endOfInstructionTag);

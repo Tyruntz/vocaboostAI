@@ -1,8 +1,8 @@
 // ChatbotContent.jsx
 import React from "react";
 import { useEffect, useRef } from "react";
-import { HiOutlinePencilAlt } from "react-icons/hi"; // Pastikan ini diimpor
-import { HiMenuAlt3 } from "react-icons/hi"; // Contoh ikon menu, pastikan diimpor jika digunakan
+import { HiOutlinePencilAlt } from "react-icons/hi";
+import { HiMenuAlt3 } from "react-icons/hi";
 
 const formatWaktu = (iso) => {
    if (!iso) return "";
@@ -73,6 +73,26 @@ const BotMessage = ({ message, waktu }) => {
    );
 };
 
+// New component for the typing indicator
+const BotTypingIndicator = () => (
+   <div className="flex justify-start">
+      <div className="bg-[#001D3D] text-white px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+         <div
+            className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce"
+            style={{ animationDelay: "0.1s" }}
+         ></div>
+         <div
+            className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce"
+            style={{ animationDelay: "0.2s" }}
+         ></div>
+         <div
+            className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce"
+            style={{ animationDelay: "0.3s" }}
+         ></div>
+      </div>
+   </div>
+);
+
 const ChatbotContent = ({
    loading,
    messages,
@@ -89,14 +109,14 @@ const ChatbotContent = ({
    };
    const messagesEndRef = useRef(null);
    useEffect(() => {
+      if (messages.length === 0) return; // jangan scroll kalau belum ada pesan
+
       if (messagesEndRef.current) {
          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
       }
-   }, [messages, isBotTyping]);
+   }, [messages.length, isBotTyping]);
 
    return (
-      // Outer container - Hapus rounded-lg dan shadow-lg untuk full width
-      // Tambahkan w-full dan h-full untuk mengisi layar
       <div className="flex flex-col w-full h-full bg-[#000814]">
          {/* Header - Hapus rounded-t-lg untuk full width */}
          <div className="px-4 py-3 sm:px-6 sm:py-4 bg-[#001D3D] flex items-center justify-between shadow-md">
@@ -124,16 +144,16 @@ const ChatbotContent = ({
                      className="bg-[#FFC300] hover:bg-[#FFD60A] text-[#000814] font-bold py-2 px-3 rounded-lg transition duration-200 ease-in-out text-sm flex items-center gap-2"
                   >
                      <HiOutlinePencilAlt className="text-lg" />
-
                      {/* Hanya tampil di layar sm ke atas */}
-                     <span className="hidden sm:inline">Mulai Percakapan Baru</span>
+                     <span className="hidden sm:inline">
+                        Mulai Percakapan Baru
+                     </span>
                   </button>
                </>
             )}
          </div>
 
          {/* Area tampilan chat */}
-         {/* Pertahankan padding horizontal untuk konten chat */}
          <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
             {loading ? (
                <div className="animate-pulse space-y-4">
@@ -161,32 +181,36 @@ const ChatbotContent = ({
                         />
                      )
                   )}
+                  {/* Conditional rendering for the typing indicator */}
                   <div ref={messagesEndRef} className="h-1" />
+                  {isBotTyping && <BotTypingIndicator />}
                </div>
             )}
          </div>
 
          {/* Input area - Hapus rounded-b-lg untuk full width */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 bg-[#001D3D] shadow-inner">
-        <div className="flex items-center gap-2"> {/* Kurangi gap menjadi gap-2 saja, atau bahkan gap-1 jika sangat sempit */}
-          <input
-            type="text"
-            placeholder="Masukan pertanyaan"
-            className="flex-1 border border-[#003566] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#000814] text-white placeholder-gray-400 min-w-0"
-            value={currentInput}
-            onChange={onInputChange}
-            onKeyPress={handleKeyPress}
-            disabled={loading}
-          />
-          <button
-            className="bg-[#003566] hover:bg-[#001D3D] text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out shrink-0"
-            onClick={onSendMessage}
-            disabled={loading || currentInput.trim() === ""}
-          >
-            Kirim
-          </button>
-        </div>
-      </div>
+         <div className="px-4 py-3 sm:px-6 sm:py-4 bg-[#001D3D] shadow-inner">
+            <div className="flex items-center gap-2">
+               {" "}
+               {/* Kurangi gap menjadi gap-2 saja, atau bahkan gap-1 jika sangat sempit */}
+               <input
+                  type="text"
+                  placeholder="Masukan pertanyaan"
+                  className="flex-1 border border-[#003566] rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#FFC300] bg-[#000814] text-white placeholder-gray-400 min-w-0"
+                  value={currentInput}
+                  onChange={onInputChange}
+                  onKeyPress={handleKeyPress}
+                  disabled={loading}
+               />
+               <button
+                  className="bg-[#003566] hover:bg-[#001D3D] text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out shrink-0"
+                  onClick={onSendMessage}
+                  disabled={loading || currentInput.trim() === ""}
+               >
+                  Kirim
+               </button>
+            </div>
+         </div>
       </div>
    );
 };

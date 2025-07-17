@@ -99,108 +99,75 @@ const SoalLatihanContent = ({
    const [loadingNextQuestion, setLoadingNextQuestion] = useState(false);
    const [usedQuestionIds, setUsedQuestionIds] = useState([]);
    const [aiQuestionCount, setAiQuestionCount] = useState(0);
-   const MAX_AI_QUESTIONS = 3;
+   const [usedQuestionTexts, setUsedQuestionTexts] = useState([]);
+
+   const [questionFetchCount, setQuestionFetchCount] = useState(0);
+   const MAX_AI_QUESTIONS = 2;
 
    // Effect untuk memuat dan mengacak soal berdasarkan topicId
    useEffect(() => {
-      const fetchAndShuffleQuestions = async () => {
-         setLoadingQuestions(true);
-         setError(null);
-         setQuestions([]); // Kosongkan soal sebelumnya
-         setCurrentQuestionIndex(0);
-         setScore(0);
-         setFeedback(null);
-         setUserAnswer("");
-         setIsAnswerSubmitted(false);
-         setShowResultModal(false);
-         if (topicId) {
-            setCurrentSessionId(uuidv4());
-         }
+  let isMounted = true;
 
-         if (!topicId) {
-            setError("ID topik tidak ditemukan.");
-            setLoadingQuestions(false);
-            return;
-         }
+  const fetchAndShuffleQuestions = async () => {
+    setLoadingQuestions(true);
+    setError(null);
+    setQuestions([]);
+    setCurrentQuestionIndex(0);
+    setScore(0);
+    setFeedback(null);
+    setUserAnswer("");
+    setIsAnswerSubmitted(false);
+    setShowResultModal(false);
+    setUsedQuestionIds([]);
+    setUsedQuestionTexts([]);
 
-         try {
-            // Fetch nama topik dari API materi (jika diperlukan untuk display)
-            const materiResponse = await fetch(
-               `/api/grammar/materi/get-all.json`
-            );
-            if (!materiResponse.ok) {
-               throw new Error(
-                  `Failed to fetch materi name: ${materiResponse.status}`
-               );
-            }
-            const materiData = await materiResponse.json();
-            const selectedMateri = materiData.materi.find(
-               (m) => m.id == topicId
-            ); // Gunakan == untuk perbandingan
-            if (selectedMateri) {
-               setTopicName(
-                  selectedMateri.nama ||
-                     selectedMateri.nama_topik ||
-                     "Topik Tidak Dikenal"
-               );
-            } else {
-               setTopicName("Topik Tidak Ditemukan");
-            }
+    if (topicId) {
+      setCurrentSessionId(uuidv4());
+    } else {
+      setError("ID topik tidak ditemukan.");
+      setLoadingQuestions(false);
+      return;
+    }
 
-            // Panggil API endpoint untuk mengambil soal berdasarkan ID materi
-            let soalFromDB = [];
-            let soalFromAI = [];
+    try {
+      const materiResponse = await fetch(`/api/grammar/materi/get-all.json`);
+      if (!materiResponse.ok) throw new Error("Gagal fetch nama materi");
 
-            const randomChoice = Math.random(); // generate 0 - 1
+      const materiData = await materiResponse.json();
+      const selectedMateri = materiData.materi.find((m) => m.id == topicId);
+      setTopicName(
+        selectedMateri?.nama || selectedMateri?.nama_topik || "Topik Tidak Dikenal"
+      );
 
-            if (randomChoice < 0.5) {
-               // Ambil soal dari database
-               const response = await fetch(
-                  `/api/grammar/soal/get-by-materi/${topicId}.json`
-               );
-               const data = await response.json();
-               if (!Array.isArray(data.soal))
-                  throw new Error("Format data soal tidak valid.");
-               soalFromDB = data.soal;
-            } else {
-               // Ambil soal dari AI
-               const response = await fetch(
-                  `/api/grammar/soal/generate-by-topic/${topicId}.json`
-               );
-               const data = await response.json();
-               if (!data.soal) throw new Error("Gagal mendapatkan soal AI.");
-               soalFromAI = [data.soal]; // Masukkan ke array agar bisa di-shuffle juga
-            }
+      // Inisialisasi array soal dengan null
+      setQuestions(Array(10).fill(null));
 
-            // Gabungkan dan acak
-            const mergedQuestions = [...soalFromDB, ...soalFromAI].sort(
-               () => Math.random() - 0.5
-            );
-            if (mergedQuestions.length > 0) {
-               setUsedQuestionIds([mergedQuestions[0].id]);
-            }
+      const firstSoal = await fetchSingleQuestion();
+      if (!firstSoal) throw new Error("Soal pertama tidak valid");
 
-            setQuestions(Array(10).fill(null));
-            try {
-               const firstSoal = await fetchSingleQuestion();
-               setQuestions((prev) => {
-                  const updated = [...prev];
-                  updated[0] = firstSoal;
-                  return updated;
-               });
-            } catch (err) {
-               setError("Gagal memuat soal pertama: " + err.message);
-            }
-         } catch (err) {
-            console.error("Error fetching questions:", err);
-            setError(`Gagal memuat soal: ${err.message}`);
-         } finally {
-            setLoadingQuestions(false);
-         }
-      };
+      if (!isMounted) return;
 
-      fetchAndShuffleQuestions();
-   }, [topicId]); // Bergantung pada topicId
+      setQuestions((prev) => {
+        const updated = [...prev];
+        updated[0] = firstSoal;
+        return updated;
+      });
+    } catch (err) {
+      console.error("Error fetching questions:", err);
+      setError(`Gagal memuat soal: ${err.message}`);
+    } finally {
+      if (isMounted) setLoadingQuestions(false);
+    }
+  };
+
+  fetchAndShuffleQuestions();
+
+  return () => {
+    isMounted = false;
+  };
+}, [topicId]);
+
+
    const simpanSoalAIKeDatabase = async (soal, topicId) => {
       try {
          const response = await fetch("/api/grammar/soal/add.json", {
@@ -226,7 +193,8 @@ const SoalLatihanContent = ({
          }
 
          const result = await response.json();
-         return result.soal; // berisi ID dari DB
+         return result.soal?.id ? result.soal : null;
+         // berisi ID dari DB
       } catch (err) {
          console.error("Terjadi error saat simpan soal AI:", err);
          return null;
@@ -241,8 +209,13 @@ const SoalLatihanContent = ({
          const data = await response.json();
          if (Array.isArray(data.soal) && data.soal.length > 0) {
             const filtered = data.soal.filter(
-               (soal) => !usedQuestionIds.includes(soal.id)
+               (soal) =>
+                  !usedQuestionIds.includes(soal.id) &&
+                  !usedQuestionTexts.includes(
+                     soal.text_pertanyaan.trim().toLowerCase()
+                  )
             );
+
             if (filtered.length === 0)
                throw new Error("Semua soal dari DB sudah digunakan.");
             const randomSoal =
@@ -253,43 +226,62 @@ const SoalLatihanContent = ({
          }
       };
 
-      const bolehPakaiAI = aiQuestionCount < MAX_AI_QUESTIONS;
-      const randomChoice = Math.random(); // 0 - 1
+      const isFirstQuestion = questionFetchCount === 0;
+      const bolehPakaiAI =
+         !isFirstQuestion && aiQuestionCount < MAX_AI_QUESTIONS;
 
-      if (bolehPakaiAI && randomChoice < 0.5) {
+      let soal;
+
+      if (bolehPakaiAI && Math.random() < 0.5) {
          try {
             const response = await fetch(
                `/api/grammar/soal/generate-by-topic/${topicId}.json`
             );
 
-            const status = response.status;
+            if (response.status === 429) {
+               console.warn("Quota AI habis, fallback ke database...");
+               soal = await ambilDariDatabase();
+            } else {
+               const data = await response.json();
+               if (!data.soal) throw new Error("Gagal ambil soal dari AI.");
+               const soalAI = data.soal;
 
-            // Tetap naikin counter walaupun gagal
-            setAiQuestionCount((prev) => prev + 1);
+               const isDuplicate = usedQuestionTexts.includes(
+                  soalAI.text_pertanyaan.trim().toLowerCase()
+               );
 
-            if (status === 429) {
-               console.warn("Quota Gemini habis, fallback ke database...");
-               return await ambilDariDatabase();
+               // Tetap simpan ke database meskipun duplikat teks, untuk dapat ID dari Supabase
+               const soalDisimpan = await simpanSoalAIKeDatabase(
+                  soalAI,
+                  topicId
+               );
+
+               if (soalDisimpan && soalDisimpan.id) {
+                  soal = soalDisimpan;
+                  if (isDuplicate) {
+                     console.warn(
+                        "Soal AI duplikat. Tapi tetap disimpan untuk ambil ID valid."
+                     );
+                  }
+               } else {
+                  console.warn("Gagal simpan soal AI. Menggunakan langsung.");
+                  soal = soalAI;
+               }
+
+               setAiQuestionCount((prev) => prev + 1);
             }
-
-            const data = await response.json();
-            if (!data.soal) throw new Error("Gagal ambil soal dari AI.");
-
-            const soalDisimpan = await simpanSoalAIKeDatabase(
-               data.soal,
-               topicId
-            );
-            if (!soalDisimpan)
-               throw new Error("Soal AI gagal disimpan ke database.");
-
-            return soalDisimpan;
          } catch (err) {
             console.warn("Gagal ambil soal AI, fallback ke DB:", err.message);
-            return await ambilDariDatabase();
+            soal = await ambilDariDatabase();
          }
       } else {
-         return await ambilDariDatabase();
+         soal = await ambilDariDatabase();
       }
+
+      // Increment counter total soal yang pernah di-fetch
+      setQuestionFetchCount((prev) => prev + 1);
+
+      return soal;
    };
 
    // Fungsi untuk menangani perubahan input jawaban (isian singkat)
@@ -319,7 +311,8 @@ const SoalLatihanContent = ({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                user_id: userId,
-               id_soal: question.id, // ID soal dari database
+               id_soal: question.id, // Asumsi question.id adalah ID soal dari database
+               // ID soal dari database
                jawaban_pengguna: userAnswer,
                is_correct: isCorrect,
                score_diperoleh: scoreEarned,
@@ -418,6 +411,10 @@ const SoalLatihanContent = ({
                });
 
                setUsedQuestionIds((prevIds) => [...prevIds, newSoal.id]);
+               setUsedQuestionTexts((prevTexts) => [
+                  ...prevTexts,
+                  newSoal.text_pertanyaan.trim().toLowerCase(),
+               ]);
             } catch (err) {
                console.error("Gagal memuat soal baru:", err);
             }
