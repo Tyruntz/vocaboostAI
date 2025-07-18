@@ -1,5 +1,5 @@
 // import { translate } from '@vitalets/google-translate-api';
-const API_URL = "https://ets6fgt16lfyrc-8000.proxy.runpod.net/generate"; // Pastikan URL ini benar
+const API_URL = "https://2r68ivu8kr2dyl-8000.proxy.runpod.net/generate"; // Pastikan URL ini benar
 import { generateFromModel } from "./chatApi";
 
 export async function generateLlamaText(
