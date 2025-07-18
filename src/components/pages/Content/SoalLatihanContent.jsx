@@ -106,67 +106,82 @@ const SoalLatihanContent = ({
 
    // Effect untuk memuat dan mengacak soal berdasarkan topicId
    useEffect(() => {
-  let isMounted = true;
+      let isMounted = true;
 
-  const fetchAndShuffleQuestions = async () => {
-    setLoadingQuestions(true);
-    setError(null);
-    setQuestions([]);
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setFeedback(null);
-    setUserAnswer("");
-    setIsAnswerSubmitted(false);
-    setShowResultModal(false);
-    setUsedQuestionIds([]);
-    setUsedQuestionTexts([]);
+      const fetchAndShuffleQuestions = async () => {
+         setLoadingQuestions(true);
+         setError(null);
+         setQuestions([]);
+         setCurrentQuestionIndex(0);
+         setScore(0);
+         setFeedback(null);
+         setUserAnswer("");
+         setIsAnswerSubmitted(false);
+         setShowResultModal(false);
+         // Hapus reset usedQuestionIds dan usedQuestionTexts di sini
 
-    if (topicId) {
-      setCurrentSessionId(uuidv4());
-    } else {
-      setError("ID topik tidak ditemukan.");
-      setLoadingQuestions(false);
-      return;
-    }
+         if (topicId) {
+            setCurrentSessionId(uuidv4());
+         } else {
+            setError("ID topik tidak ditemukan.");
+            setLoadingQuestions(false);
+            return;
+         }
 
-    try {
-      const materiResponse = await fetch(`/api/grammar/materi/get-all.json`);
-      if (!materiResponse.ok) throw new Error("Gagal fetch nama materi");
+         try {
+            const materiResponse = await fetch(
+               `/api/grammar/materi/get-all.json`
+            );
+            if (!materiResponse.ok) throw new Error("Gagal fetch nama materi");
 
-      const materiData = await materiResponse.json();
-      const selectedMateri = materiData.materi.find((m) => m.id == topicId);
-      setTopicName(
-        selectedMateri?.nama || selectedMateri?.nama_topik || "Topik Tidak Dikenal"
-      );
+            const materiData = await materiResponse.json();
+            const selectedMateri = materiData.materi.find(
+               (m) => m.id == topicId
+            );
+            setTopicName(
+               selectedMateri?.nama ||
+                  selectedMateri?.nama_topik ||
+                  "Topik Tidak Dikenal"
+            );
 
-      // Inisialisasi array soal dengan null
-      setQuestions(Array(10).fill(null));
+            // Inisialisasi array soal dengan null
+            setQuestions(Array(10).fill(null));
 
-      const firstSoal = await fetchSingleQuestion();
-      if (!firstSoal) throw new Error("Soal pertama tidak valid");
+            // Pindahkan inisialisasi usedQuestionIds dan usedQuestionTexts ke sini
+            setUsedQuestionIds([]);
+            setUsedQuestionTexts([]);
 
-      if (!isMounted) return;
+            const firstSoal = await fetchSingleQuestion();
+            if (!firstSoal) throw new Error("Soal pertama tidak valid");
 
-      setQuestions((prev) => {
-        const updated = [...prev];
-        updated[0] = firstSoal;
-        return updated;
-      });
-    } catch (err) {
-      console.error("Error fetching questions:", err);
-      setError(`Gagal memuat soal: ${err.message}`);
-    } finally {
-      if (isMounted) setLoadingQuestions(false);
-    }
-  };
+            if (!isMounted) return;
 
-  fetchAndShuffleQuestions();
+            setQuestions((prev) => {
+               const updated = [...prev];
+               updated[0] = firstSoal;
+               return updated;
+            });
 
-  return () => {
-    isMounted = false;
-  };
-}, [topicId]);
+            // Tambahkan soal pertama ke daftar yang sudah dipakai
+            setUsedQuestionIds((prev) => [...prev, firstSoal.id]);
+            setUsedQuestionTexts((prev) => [
+               ...prev,
+               firstSoal.text_pertanyaan.trim().toLowerCase(),
+            ]);
+         } catch (err) {
+            console.error("Error fetching questions:", err);
+            setError(`Gagal memuat soal: ${err.message}`);
+         } finally {
+            if (isMounted) setLoadingQuestions(false);
+         }
+      };
 
+      fetchAndShuffleQuestions();
+
+      return () => {
+         isMounted = false;
+      };
+   }, [topicId]);
 
    const simpanSoalAIKeDatabase = async (soal, topicId) => {
       try {
@@ -203,11 +218,17 @@ const SoalLatihanContent = ({
 
    const fetchSingleQuestion = async () => {
       const ambilDariDatabase = async () => {
-         const response = await fetch(
-            `/api/grammar/soal/get-by-materi/${topicId}.json`
-         );
-         const data = await response.json();
-         if (Array.isArray(data.soal) && data.soal.length > 0) {
+         try {
+            const response = await fetch(
+               `/api/grammar/soal/get-by-materi/${topicId}.json`
+            );
+            const data = await response.json();
+
+            if (!Array.isArray(data.soal) || data.soal.length === 0) {
+               throw new Error("Soal dari database kosong.");
+            }
+
+            // Filter soal yang belum digunakan
             const filtered = data.soal.filter(
                (soal) =>
                   !usedQuestionIds.includes(soal.id) &&
@@ -216,13 +237,20 @@ const SoalLatihanContent = ({
                   )
             );
 
-            if (filtered.length === 0)
-               throw new Error("Semua soal dari DB sudah digunakan.");
-            const randomSoal =
-               filtered[Math.floor(Math.random() * filtered.length)];
-            return randomSoal;
-         } else {
-            throw new Error("Soal dari database kosong.");
+            if (filtered.length === 0) {
+               // Jika semua soal sudah dipakai, beri warning dan reset daftar yang sudah dipakai
+               console.warn(
+                  "Semua soal dari DB sudah digunakan. Mereset daftar soal yang sudah dipakai."
+               );
+               setUsedQuestionIds([]);
+               setUsedQuestionTexts([]);
+               return data.soal[Math.floor(Math.random() * data.soal.length)];
+            }
+
+            return filtered[Math.floor(Math.random() * filtered.length)];
+         } catch (err) {
+            console.error("Error mengambil soal dari database:", err);
+            throw err;
          }
       };
 
@@ -398,10 +426,10 @@ const SoalLatihanContent = ({
       const nextIndex = currentQuestionIndex + 1;
 
       if (nextIndex < 10) {
-         setLoadingNextQuestion(true); // Mulai loading
+         setLoadingNextQuestion(true);
 
-         if (!questions[nextIndex]) {
-            try {
+         try {
+            if (!questions[nextIndex]) {
                const newSoal = await fetchSingleQuestion();
 
                setQuestions((prev) => {
@@ -410,21 +438,23 @@ const SoalLatihanContent = ({
                   return updated;
                });
 
-               setUsedQuestionIds((prevIds) => [...prevIds, newSoal.id]);
-               setUsedQuestionTexts((prevTexts) => [
-                  ...prevTexts,
+               // Pastikan soal baru ditambahkan ke daftar yang sudah dipakai
+               setUsedQuestionIds((prev) => [...prev, newSoal.id]);
+               setUsedQuestionTexts((prev) => [
+                  ...prev,
                   newSoal.text_pertanyaan.trim().toLowerCase(),
                ]);
-            } catch (err) {
-               console.error("Gagal memuat soal baru:", err);
             }
+         } catch (err) {
+            console.error("Gagal memuat soal baru:", err);
+            setError(`Gagal memuat soal: ${err.message}`);
+         } finally {
+            setCurrentQuestionIndex(nextIndex);
+            setUserAnswer("");
+            setFeedback(null);
+            setIsAnswerSubmitted(false); 
+            setLoadingNextQuestion(false);
          }
-
-         setCurrentQuestionIndex(nextIndex);
-         setUserAnswer("");
-         setFeedback(null);
-         setIsAnswerSubmitted(false);
-         setLoadingNextQuestion(false); // Selesai loading
       } else {
          setShowResultModal(true);
       }
