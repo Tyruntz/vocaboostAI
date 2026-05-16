@@ -16,6 +16,10 @@ VocaboostAI is a full-stack intelligent tutoring system built as an S.Kom thesis
 
 The system serves two core functions: an interactive English grammar chatbot powered by a QLoRA fine-tuned Llama2-7B, and an adaptive exercise engine that generates and tracks grammar exercises per user session.
 
+### Why this was built
+
+This project started from an interest in NLP and the question of what a genuinely useful language learning tool would look like — not a toy demo, but something that could handle real user sessions, persist progress, generate exercises on demand, and explain grammar in a way that actually helps. Fine-tuning a 7B-parameter model end-to-end — from dataset preparation to production inference — was the most technically honest way to answer that question.
+
 ---
 
 ## Architecture
